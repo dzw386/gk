@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<script>
+"use strict";
+var canvas;
+var graphics;
+function draw() {
+	graphics.clearRect(0, 0, 600, 600);
+	graphics.fillStyle = "rgb(0, 255, 0)";
+	graphics.fillPoly(100, 500, 500, 500, 300, 100);
+	graphics.lineWidth = 5;
+	graphics.strokeStyle = "rgb(0, 0, 0)";
+	graphics.strokePoly(100, 500, 500, 500, 300, 100);
+	graphics.fillStyle = "rgb(255, 255, 255)";
+	graphics.fillCircle(250, 300, 35);
+	graphics.fillCircle(350, 300, 35);
+	graphics.fillStyle = "rgb(0, 0, 0)";
+	graphics.fillCircle(250, 300, 25);
+	graphics.fillCircle(350, 300, 25);
+	graphics.beginPath();
+	graphics.moveTo(250, 425);
+	graphics.bezierCurveTo(275, 485, 325, 485, 350, 425);
+	graphics.bezierCurveTo(325, 445, 275, 445, 250, 425);
+	graphics.closePath();
+	graphics.fill();
+	graphics.strokeStyle = "rgb(0, 0, 0)";
+	graphics.beginPath();
+	graphics.arc(200, 400, 59, Math.PI / 4 - 0.5, Math.PI / 4);
+	graphics.stroke();
+	graphics.beginPath();
+	graphics.arc(400, 400, 59, 3 * Math.PI / 4, 3 * Math.PI / 4 + 0.5);
+	graphics.stroke();
+	graphics.fillStyle = "rgb(255, 255, 255)";
+	graphics.fillCircle(240, 290, 5);
+	graphics.fillCircle(340, 290, 5);
+	graphics.fillPoly(285, 445, 285, 460, 299, 460, 299, 445);
+	graphics.fillPoly(301, 445, 301, 460, 315, 460, 315, 445);
+}
+function addGraphicsContextExtras(graphics) {
+	graphics.strokeLine = function(x1, y1, x2, y2) {
+		this.beginPath();
+		this.moveTo(x1, y1);
+		this.lineTo(x2, y2);
+		this.stroke();
+	}
+	graphics.fillCircle = function(x, y, r) {
+		this.beginPath();
+		this.arc(x, y, r, 0, 2 * Math.PI, false);
+		this.fill();
+	}
+	graphics.strokeCircle = function(x, y, radius) {
+		this.beginPath();
+		this.arc(x, y, radius, 0, 2 * Math.PI, false);
+		this.stroke();
+	}
+	graphics.fillPoly = function() {
+		if (arguments.length < 6) return;
+		this.beginPath();
+		this.moveTo(arguments[0], arguments[1]);
+		for(var i = 2; i + 1 < arguments.length; i += 2) {
+			this.lineTo(arguments[i], arguments[i + 1]);
+		}
+		this.closePath();
+		this.fill();
+	}
+	graphics.strokePoly = function() {
+		if (arguments.length < 4) return;
+		this.beginPath();
+		this.moveTo(arguments[0], arguments[1]);
+		for(var i = 2; i + 1 < arguments.length; i += 2) {
+			this.lineTo(arguments[i], arguments[i + 1]);
+		}
+		this.closePath();
+		this.stroke();
+	}
+	graphics.fillOval = function(x, y, horizontalRadius, verticalRadius) {
+		this.save();
+		this.translate(x, y);
+		this.scale(horizontalRadius, verticalRadius);
+		this.beginPath();
+		this.arc(0, 0, 1, 0, 2 * Math.PI, false);
+		this.restore();
+		this.fill();
+	}
+	graphics.strokeOval = function(x, y, horizontalRadius, verticalRadius) {
+		this.save();
+		this.translate(x, y);
+		this.scale(horizontalRadius, verticalRadius);
+		this.beginPath();
+		this.arc(0, 0, 1, 0, 2 * Math.PI, false);
+		this.restore();
+		this.stroke();
+	}
+	graphics.getRGB = function(x, y) {
+		var color = this.getImageData(x, y, 1, 1);
+		return color.data;
+	}
+}
+function init() {
+	canvas = document.getElementById("canvas");
+	graphics = canvas.getContext("2d");
+	addGraphicsContextExtras(graphics);
+	draw();
+}
+		</script>
+	</head>
+	<body onload="init()">
+		<noscript>
+			<p>JavaScript is required</p>
+		</noscript>
+		<canvas id="canvas" width="600" height="600" style="display: block; border: 1px solid black">
+			Canvas not supported
+		</canvas>
+	</body>
+</html>

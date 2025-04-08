@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Subroutine Hierarchy</title>
+		<script>
+var canvas;
+var graphics;
+var X_LEFT = - 4;
+var X_RIGHT = 4;
+var Y_BOTTOM = - 3;
+var Y_TOP = 3;
+var BACKGROUND = "white";
+var POLYGON_SIDES = 19;
+var polygonInscribedRadius = Math.cos(Math.PI / POLYGON_SIDES);
+var polygonSideScale = 2 * Math.sin(Math.PI / POLYGON_SIDES);
+var polygonSpokeAngle = 2 * Math.PI / POLYGON_SIDES;
+var pixelSize;
+var frameNumber = 0;
+
+function polygon() {
+	graphics.save();
+	graphics.strokeStyle = "black";
+	graphics.rotate(frameNumber / 10);
+	for(var i = 0; i < POLYGON_SIDES; i++) {
+		// spoke
+		graphics.save();
+		graphics.rotate(2 * Math.PI * i / POLYGON_SIDES);
+		graphics.translate(0.5, 0);
+		line();
+		graphics.restore();
+		// side
+		graphics.save();
+		graphics.rotate(- Math.PI / 2 + i * polygonSpokeAngle); // the side is drawn opposite to the spoke
+		graphics.translate(0, - polygonInscribedRadius);
+		graphics.scale(polygonSideScale, 1);
+		line();
+		graphics.restore();
+	}
+	graphics.restore();
+}
+
+function bar() {
+	// left polygon
+	graphics.save();
+	graphics.translate(- 1.4, 0);
+	graphics.scale(0.75, 0.75);
+	polygon();
+	graphics.restore();
+	// right polygon
+	graphics.save();
+	graphics.translate(1.4, 0);
+	graphics.scale(0.75, 0.75);
+	polygon();
+	graphics.restore();
+	// bar
+	graphics.save();
+	graphics.fillStyle = "red";
+	graphics.scale(3, 0.2);
+	filledRect();
+	graphics.restore();
+}
+
+function tower(color) {
+	graphics.save();
+	graphics.rotate(- Math.PI / 12);
+	bar();
+	graphics.restore();
+	graphics.save();
+	graphics.fillStyle = color;
+	graphics.translate(0, - 3);
+	graphics.scale(1, 3);
+	filledTriangle(graphics)
+	graphics.restore();
+}
+
+function drawWorld() {
+	graphics.save();
+	graphics.translate(0, - 0.5);
+	graphics.scale(0.7, 0.7);
+	tower("blue");
+	graphics.restore();
+	graphics.save();
+	graphics.translate(- 2, 1.5);
+	graphics.scale(0.5, 0.5);
+	tower("purple");
+	graphics.restore();
+	graphics.save();
+	graphics.translate(1.5, 1.5);
+	graphics.scale(0.4, 0.4);
+	tower("green");
+	graphics.restore();
+}
+
+function updateFrame() {
+	frameNumber++;
+}
+
+function line() {
+	graphics.beginPath();
+	graphics.moveTo(- 0.5, 0);
+	graphics.lineTo(0.5, 0);
+	graphics.stroke();
+}
+
+function rect() {
+	graphics.strokeRect(- 0.5, - 0.5, 1, 1);
+}
+
+function filledRect() {
+	graphics.fillRect(- 0.5, - 0.5, 1, 1);
+}
+
+function circle() {
+	graphics.beginPath();
+	graphics.arc(0, 0, 0.5, 0, 2 * Math.PI);
+	graphics.stroke();
+}
+
+function filledCircle() {
+	graphics.beginPath();
+	graphics.arc(0, 0, 0.5, 0, 2 * Math.PI);
+	graphics.fill();
+}
+
+function filledTriangle(g2) {
+	g2.beginPath();
+	g2.moveTo(- 0.5, 0);
+	g2.lineTo(0.5, 0);
+	g2.lineTo(0, 1);
+	g2.closePath();
+	g2.fill();
+}
+
+function draw() {
+	graphics.save();
+	graphics.fillStyle = BACKGROUND;
+	graphics.fillRect(0, 0, canvas.width, canvas.height);
+	graphics.fillStyle = "black";
+	applyLimits(graphics, X_LEFT, X_RIGHT, Y_TOP, Y_BOTTOM, false);
+	graphics.lineWidth = pixelSize;
+	drawWorld();
+	graphics.restore();
+}
+
+function applyLimits(g, xleft, xright, ytop, ybottom, preserveAspect) {
+	var width = canvas.width;
+	var height = canvas.height;
+	if(preserveAspect) {
+		var displayAspect = Math.abs(height / width);
+		var requestedAspect = Math.abs((ybottom - ytop) / (xright - xleft));
+		var excess;
+		if(displayAspect > requestedAspect) {
+			excess = (ybottom - ytop) * (displayAspect / requestedAspect - 1);
+			ybottom += excess / 2;
+			ytop -= excess / 2;
+		} else if(displayAspect < requestedAspect) {
+			excess = (xright - xleft) * (requestedAspect / displayAspect - 1);
+			xright += excess / 2;
+			xleft -= excess / 2;
+		}
+	}
+	var pixelWidth = Math.abs((xright - xleft) / width);
+	var pixelHeight = Math.abs((ybottom - ytop) / height);
+	pixelSize = Math.min(pixelWidth, pixelHeight);
+	g.scale(width / (xright - xleft), height / (ybottom - ytop));
+	g.translate(- xleft, - ytop);
+}
+
+var running = false;
+
+function frame() {
+	if(running) {
+		updateFrame();
+		draw();
+		requestAnimationFrame(frame);
+	}
+}
+
+function doAnimationCheckbox() {
+	var shouldRun = document.getElementById("animateCheck").checked;
+	if(shouldRun != running) {
+		running = shouldRun;
+		if(running)
+			requestAnimationFrame(frame);
+	}
+}
+
+function init() {
+	canvas = document.getElementById("canvas");
+	if(!canvas.getContext) {
+		document.getElementById("message").innerHTML = "ERROR: Canvas not supported";
+		return;
+	}
+	graphics = canvas.getContext("2d");
+	document.getElementById("animateCheck").checked = false;
+	document.getElementById("animateCheck").onchange = doAnimationCheckbox;
+	draw();
+}
+		</script>
+	</head>
+	<body onload="init()" style="background-color: #EEEEEE">
+		<h1>Subroutine Hierarchy</h1>
+		<noscript>
+			<p>JavaScript is required</p>
+		</noscript>
+		<label><input type="checkbox" id="animateCheck">Animate</label>
+		<canvas id="canvas" width="800" height="600" style="display: block; border: 1px solid black">
+			Canvas not supported
+		</canvas>
+	</body>
+</html>

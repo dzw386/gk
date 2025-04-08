@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>OpenGL 1.1 Light</title>
+		<script src="glsim.js"></script>
+		<script>
+var camera;
+var animating = false;
+var frameNumber = 0;
+
+var animate;
+var ambientLight;
+var floatingLight;
+
+var floatingLightColor =  [0.375, 0.375, 0.75, 1];
+var floatingLightAmbientColor = [0.1, 0.1, 0.2, 1];
+var ambientLightColor = [0.2, 0.2, 0.2, 1];
+var blackColor = [0, 0, 0, 1];
+
+function uvSphere(radius, slices, stacks) {
+	for(var j = 0; j < stacks; j++) {
+		var latitude1 = (Math.PI / stacks) * j - Math.PI / 2;
+		var latitude2 = (Math.PI / stacks) * (j + 1) - Math.PI / 2;
+		var sinLat1 = Math.sin(latitude1);
+		var cosLat1 = Math.cos(latitude1);
+		var sinLat2 = Math.sin(latitude2);
+		var cosLat2 = Math.cos(latitude2);
+		glBegin(GL_TRIANGLE_STRIP);
+		for(var i = 0; i <= slices; i++) {
+			var longitude = (2 * Math.PI / slices) * i;
+			var sinLong = Math.sin(longitude);
+			var cosLong = Math.cos(longitude);
+			var x1 = cosLong * cosLat1;
+			var y1 = sinLong * cosLat1;
+			var z1 = sinLat1;
+			var x2 = cosLong * cosLat2;
+			var y2 = sinLong * cosLat2;
+			var z2 = sinLat2;
+			glNormal3f(x2, y2, z2);
+			glVertex3f(radius * x2, radius * y2, radius * z2);
+			glNormal3f(x1, y1, z1);
+			glVertex3f(radius * x1, radius * y1, radius * z1);
+		}
+		glEnd();
+	}
+}
+
+function pyramid(sides, radius, height) {
+	glColor3d(0.75, 0.75, 0.75);
+	
+	// sides
+	glBegin(GL_TRIANGLE_FAN);
+	glNormal3f(0, 1, 0);
+	glVertex3f(0, height, 0);
+	for(var i = 0; i <= sides; i++) {
+		var angle = 2 * Math.PI * i / sides;
+		var cosAngle = Math.cos(angle);
+		var sinAngle = Math.sin(angle);
+		var x = cosAngle * radius;
+		var z = sinAngle * radius;
+		var nx = cosAngle * height;
+		var nz = sinAngle * height;
+		glNormal3f(nx, radius, nz);
+		glVertex3f(x, 0, z);
+	}
+	glEnd();
+	
+	// base
+	glBegin(GL_TRIANGLE_FAN);
+	glNormal3f(0, - 1, 0);
+	glVertex3f(0, 0, 0);
+	for(var i = sides; i >= 0; i--) {
+		var angle = 2 * Math.PI * i / sides;
+		var x = Math.cos(angle) * radius;
+		var z = Math.sin(angle) * radius;
+		glNormal3f(0, - 1, 0);
+		glVertex3f(x, 0, z);
+	}
+	glEnd();
+}
+
+function drawCylinder() {
+	// side
+	glBegin(GL_TRIANGLE_STRIP);
+	glColor3d(0.5, 0.5, 0.5);
+	for(var i = 0; i <= 64; i++) {
+		var angle = 2 * Math.PI / 64 * i;
+		var x = Math.cos(angle);
+		var y = Math.sin(angle);
+		glNormal3d(x, y, 0);
+		glVertex3d(x, y, 1);
+		glVertex3d(x, y, - 1);
+	}
+	glEnd();
+	
+	// top
+	glNormal3d(0, 0, 1);
+	glBegin(GL_TRIANGLE_FAN);
+	glColor3d(1, 1, 1);
+	glVertex3d(0, 0, 1);
+	for(var i = 0; i <= 64; i++) {
+		var angle = 2 * Math.PI / 64 * i;
+		var x = Math.cos(angle);
+		var y = Math.sin(angle);
+		glVertex3d(x, y, 1);
+	}
+	glEnd();
+	
+	// bottom
+	glNormal3f(0, 0, - 1);
+	glBegin(GL_TRIANGLE_FAN);
+	glColor3d(1, 1, 1);
+	glVertex3d(0, 0, - 1);
+	for(var i = 64; i >= 0; i--) {
+		var angle = 2 * Math.PI / 64 * i;
+		var x = Math.cos(angle);
+		var y = Math.sin(angle);
+		glVertex3d(x, y, - 1);
+	}
+	glEnd();
+}
+
+function display() {
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	camera.apply();
+	glColor3d(1, 1, 1);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, blackColor);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, blackColor);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, blackColor);
+	
+	if(ambientLight.checked) {
+		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientLightColor);
+	} else {
+		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, blackColor);
+	}
+	
+	if(floatingLight.checked) {
+		glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, floatingLightColor);
+		glEnable(GL_LIGHT1);
+	} else {
+		glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, blackColor);
+		glDisable(GL_LIGHT1);
+	}
+	glPushMatrix();
+	glRotated(frameNumber, 0, 1, 0);
+	glTranslated(- 20, 10, 0);
+	glLightfv(GL_LIGHT1, GL_POSITION, [0, 0, 0, 1]);
+	uvSphere(1, 16, 8);
+	glPopMatrix();
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, blackColor);
+	
+	glPushMatrix();
+	glTranslated(0, - 9, 0);
+	glRotated(- 90, 1, 0, 0);
+	glScaled(15, 15, 1);
+	drawCylinder();
+	glPopMatrix();
+	
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [0.5, 0.5, 0.5, 1]);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, [111, 0, 0, 1]);
+	glPushMatrix();
+	glTranslated(0, - 8, 0);
+	glScaled(10, 10, 10);
+	pyramid(12, 1, 1);
+	glPopMatrix();
+}
+
+function initGL() {
+	glClearColor(0, 0, 0, 1);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_NORMALIZE);
+	glEnable(GL_COLOR_MATERIAL);
+	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1);
+	glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 64);
+	
+	glLightfv(GL_LIGHT1, GL_AMBIENT, floatingLightAmbientColor);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, floatingLightColor);
+	glLightfv(GL_LIGHT1, GL_SPECULAR, floatingLightColor);
+}
+
+function doFrame() {
+	if(animating) {
+		frameNumber++;
+		display();
+		setTimeout(doFrame, 30);
+	}
+}
+
+function init() {
+	glsimUse("glcanvas");
+	
+	animate = document.getElementById("animate");
+	ambientLight = document.getElementById("ambientLight");
+	floatingLight = document.getElementById("floatingLight");
+	
+	animate.checked = false;
+	ambientLight.checked = true;
+	floatingLight.checked = true;
+	
+	animate.onchange = function() {
+		if(animate.checked) {
+			animating = true;
+			doFrame();
+		} else {
+			animating = false;
+		}
+	}
+	ambientLight.onchange = display;
+	floatingLight.onchange = display;
+	
+	initGL();
+	camera = new Camera();
+	camera.lookAt(0, 0, 50, 0, 0, 0, 0, 1, 0);
+	camera.setScale(25);
+	camera.installTrackball(display);
+	display();
+}
+		</script>
+	</head>
+	<body onload="init()">
+		<h1>OpenGL 1.1 Light</h1>
+		<noscript>
+			<p>JavaScript is required</p>
+		</noscript>
+		<p>
+			<label><input type="checkbox" id="animate">Animate</label><br>
+			<label><input type="checkbox" id="ambientLight">Ambient Light</label><br>
+			<label><input type="checkbox" id="floatingLight">Floating Light</label><br>
+		</p>
+		<canvas id="glcanvas" width="600" height="600">
+			Canvas not supported
+		</canvas>
+	</body>
+</html>
