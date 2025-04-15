@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>OpenGL 1.1 Textures</title>
+		<script src="glsim.js"></script>
+		<script>
+var camera;
+var canvas;
+
+function draw() {
+	var view = Number(document.getElementById("view").value);
+	
+	if(view == 0 || view == 2) {
+		glDisable(GL_LIGHTING);
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_TEXTURE_2D);
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glMatrixMode(GL_MODELVIEW);
+		
+		drawTrianglePattern();
+		
+		if(view == 2) {
+			return;
+		}
+		
+		glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, 512, 512, 0);
+	} else if(view == 1) {
+		glEnable(GL_TEXTURE_2D);
+		// WARNING: you'll need an HTTP server for this
+		// opening this page through file:// makes the following function fail
+		// this is due to modern browser security
+		// ---
+		// BUG: texture loaded from file is only applied in the next frame
+		// refresh button provided as workaround
+		// ---
+		// texture source: https://opengameart.org/content/tileable-bricks-ground-textures-set-1-ground01png
+		// from set: https://opengameart.org/content/tileable-bricks-ground-textures-set-1
+		glsimLoadImage("ground_01.png", function(image) {
+			glsimTexImage(image);
+		});
+	}
+	
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_TEXTURE_2D);
+	camera.apply();
+	
+	pyramid(8, 1, 1);
+}
+
+// draws fractal-like pattern of gray, yellow and blue triangles
+function drawTrianglePattern() {
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glLoadIdentity();
+	
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBegin(GL_TRIANGLES);
+	for(var i = 0; i <= 3; i++) {
+		var pow = Math.pow(2, i);
+		for(var x = 0; x < pow; x++) {
+			for(var y = 0; y < pow; y++) {
+				var color = ((x % 2) ^ (y % 2)) / 2;
+				glColor4f(color, color, 0.5 - color, 2 / pow);
+				glVertex2f(2 * x / pow - 1, 2 * y / pow - 1);
+				glVertex2f(2 * (x + 1) / pow - 1, 2 * y / pow - 1);
+				glVertex2f(2 * x / pow - 1, 2 * (y + 1) / pow - 1);
+			}
+		}
+	}
+	glEnd();
+	glDisable(GL_BLEND);
+}
+
+function pyramid(sides, radius, height) {
+	glColor3d(1, 1, 1);
+	
+	// sides
+	glBegin(GL_TRIANGLE_FAN);
+	glNormal3f(0, 1, 0);
+	glTexCoord2f(0.5, 0.5);
+	glVertex3f(0, height, 0);
+	for(var i = 0; i <= sides; i++) {
+		var angle = 2 * Math.PI * i / sides;
+		var cosAngle = Math.cos(angle);
+		var sinAngle = Math.sin(angle);
+		var x = cosAngle * radius;
+		var z = sinAngle * radius;
+		var nx = cosAngle * height;
+		var nz = sinAngle * height;
+		glNormal3f(nx, radius, nz);
+		glTexCoord2f(cosAngle / 2 + 0.5, sinAngle / 2 + 0.5);
+		glVertex3f(x, 0, z);
+	}
+	glEnd();
+	
+	// base
+	glBegin(GL_TRIANGLE_FAN);
+	glNormal3f(0, - 1, 0);
+	glTexCoord2f(0.5, 0.5);
+	glVertex3f(0, 0, 0);
+	for(var i = sides; i >= 0; i--) {
+		var angle = 2 * Math.PI * i / sides;
+		var cosAngle = Math.cos(angle);
+		var sinAngle = Math.sin(angle);
+		var x = cosAngle * radius;
+		var z = sinAngle * radius;
+		glNormal3f(0, - 1, 0);
+		glTexCoord2f(cosAngle / 2 + 0.5, sinAngle / 2 + 0.5);
+		glVertex3f(x, 0, z);
+	}
+	glEnd();
+}
+
+function init() {
+	canvas = document.getElementById("glcanvas");
+	glsimUse(canvas, null);
+	
+	document.getElementById("view").value = "0";
+	document.getElementById("view").onchange = draw;
+	document.getElementById("refreshButton").onclick = draw;
+	
+	glEnable(GL_LIGHT0);
+	glEnable(GL_NORMALIZE);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, [1, 1, 1, 1]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	camera = new Camera();
+	camera.setScale(2);
+	camera.lookAt(0, 5, 10, 0, 0, 0, 0, 1, 0);
+	camera.installTrackball(draw);
+	draw();
+}
+		</script>
+	</head>
+	<body onload="init()">
+		<h1>OpenGL 1.1 Textures</h1>
+		<noscript>
+			<p>JavaScript is required</p>
+		</noscript>
+		<p>
+			View
+			<select id="view">
+				<option value="0">Pyramid 1</option>
+				<option value="1">Pyramid 2</option>
+				<option value="2">Texture for pyramid 1</option>
+			</select><br>
+			<button id="refreshButton">Refresh</button>
+		</p>
+		<canvas id="glcanvas" width="512" height="512">
+			Canvas not supported
+		</canvas>
+	</body>
+</html>
