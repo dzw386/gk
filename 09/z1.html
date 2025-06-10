@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>three.js Chess Piece</title>
+		<script type="importmap">
+{
+	"imports": {
+		"three": "./three.module.min.js"
+	}
+}
+		</script>
+		<script type="module">
+import * as THREE from "./three.module.min.js"; // r176
+import { OrbitControls } from './OrbitControls.js';
+
+var canvas, renderer, scene, camera, controls;
+var piece;
+
+function create() {
+	renderer.setClearColor(0x7f7f7f);
+	scene = new THREE.Scene();
+	camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height, 0.1, 2000);
+	camera.position.set(12, 0, 12);
+	
+	let ambientLight = new THREE.AmbientLight(0xffffff, 1);
+	scene.add(ambientLight);
+	
+	let pointLight = new THREE.DirectionalLight(0xffffff, 1);
+	pointLight.position.set(0, 0, 15);
+	scene.add(pointLight);
+	scene.add(camera);
+	
+	let piecePoints = [
+		new THREE.Vector2(0, 0),
+		new THREE.Vector2(180, 0),
+		new THREE.Vector2(180, 50),
+		new THREE.Vector2(144, 120),
+		new THREE.Vector2(108, 210),
+		new THREE.Vector2(72, 400),
+		new THREE.Vector2(72, 450),
+		new THREE.Vector2(144, 460),
+		new THREE.Vector2(128, 530),
+		new THREE.Vector2(72, 540),
+		new THREE.Vector2(108, 650),
+		new THREE.Vector2(120, 700),
+		new THREE.Vector2(108, 720),
+		new THREE.Vector2(72, 740),
+		new THREE.Vector2(45, 750),
+		new THREE.Vector2(45, 780),
+		new THREE.Vector2(30, 790),
+		new THREE.Vector2(0, 800)
+	];
+	piece = new THREE.Mesh(
+		new THREE.LatheGeometry(piecePoints, 19),
+		new THREE.MeshPhongMaterial({ color: 0x3f3f3f, specular: 0x7f7f7f, shininess: 25 })
+	);
+	piece.scale.set(0.01, 0.01, 0.01);
+	piece.position.set(0, - 4, 0);
+	scene.add(piece);
+	
+	let axesHelper = new THREE.AxesHelper(12);
+	axesHelper.position.set(0, - 4, 0);
+	scene.add(axesHelper);
+}
+
+function installOrbitControls() {
+	controls = new OrbitControls(camera, canvas);
+	function move() {
+		controls.update();
+		render();
+	}
+	function down() {
+		document.addEventListener("mousemove", move, false);
+	}
+	function up() {
+		document.removeEventListener("mousemove", move, false);
+	}
+	function touch(event) {
+		if(event.touches.length == 1) {
+			move();
+		}
+	}
+	canvas.addEventListener("mousedown", down, false);
+	canvas.addEventListener("touchmove", touch, false);
+	canvas.addEventListener("wheel", move, false);
+}
+
+function render() {
+	renderer.render(scene, camera);
+}
+
+function init() {
+	canvas = document.getElementById("threejscanvas");
+	renderer = new THREE.WebGLRenderer({
+		canvas: canvas,
+		antialias: true
+	});
+	
+	create();
+	installOrbitControls();
+	render();
+}
+
+window.onload = init;
+		</script>
+	</head>
+	<body>
+		<h1>three.js Chess Piece</h1>
+		<noscript>
+			<p>JavaScript is required</p>
+		</noscript>
+		<canvas id="threejscanvas" width="512" height="512">
+			Canvas not supported
+		</canvas>
+	</body>
+</html>

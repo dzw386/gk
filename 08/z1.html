@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>three.js Carousel</title>
+		<script type="importmap">
+{
+	"imports": {
+		"three": "./three.module.min.js"
+	}
+}
+		</script>
+		<script type="module">
+import * as THREE from "./three.module.min.js"; // r176
+import { OrbitControls } from './OrbitControls.js';
+import { GLTFLoader } from './GLTFLoader.js';
+
+var canvas, renderer, scene, camera, controls;
+var loader = new GLTFLoader();
+var animating = true;
+var carousel, horse, earth;
+var abst, shapes;
+var currentModel;
+
+function create() {
+	renderer.setClearColor(0x3f3f3f);
+	scene = new THREE.Scene();
+	camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height, 0.1, 2000);
+	camera.position.z = 15;
+	
+	let ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+	scene.add(ambientLight);
+	
+	let cameraLight = new THREE.DirectionalLight(0xffffff, 2);
+	camera.add(cameraLight);
+	scene.add(camera);
+	
+	carousel = new THREE.Group();
+	
+	let wideCylinder = new THREE.Mesh(
+		new THREE.CylinderGeometry(5, 5, 0.25, 19),
+		new THREE.MeshPhongMaterial({ color: 0x7f7fff, specular: 0x7f7f7f, shininess: 10 })
+	);
+	wideCylinder.position.set(0, - 2.125, 0);
+	carousel.add(wideCylinder.clone()); // floor
+	wideCylinder.position.set(0, 2.125, 0);
+	carousel.add(wideCylinder.clone()); // ceiling
+	
+	let cone = new THREE.Mesh(
+		new THREE.ConeGeometry(5, 1, 19),
+		new THREE.MeshPhongMaterial({ color: 0x7f7fff, specular: 0x7f7f7f, shininess: 10 })
+	);
+	cone.position.set(0, 2.75, 0);
+	carousel.add(cone.clone()); // roof
+	
+	let earthTexture = new THREE.TextureLoader().load("./earth.jpg");
+	earth = new THREE.Mesh(
+		new THREE.SphereGeometry(2, 19, 19),
+		new THREE.MeshPhongMaterial({ color: 0xffffff, specular: 0x3f3f3f, shininess: 5, map: earthTexture })
+	);
+	carousel.add(earth);
+	
+	let narrowCylinder = new THREE.Mesh(
+		new THREE.CylinderGeometry(0.125, 0.125, 4, 19),
+		new THREE.MeshPhongMaterial({ color: 0xbf7f3f, specular: 0x7f7f7f, shininess: 10 })
+	);
+	
+	loader.load(
+		"./horse.gltf",
+		function(gltf) {
+			gltf.scene.scale.set(0.01, 0.01, 0.01);
+			gltf.scene.translateY(- 1);
+			gltf.scene.rotateY(- Math.PI / 2);
+			horse = new THREE.Object3D();
+			horse.add(gltf.scene);
+			
+			let horseAmount = 8;
+			for(var i = 0; i < horseAmount; i++) {
+				let angle = (i / horseAmount) * 2 * Math.PI;
+				
+				let pillar = narrowCylinder.clone();
+				pillar.rotateY(angle);
+				pillar.translateZ(4);
+				carousel.add(pillar);
+				
+				let seat = horse.clone();
+				seat.rotateY(angle);
+				seat.translateZ(4);
+				let randomColor = new THREE.Color(Math.random() * 0xffffff);
+				seat.traverse(function(child) {
+					if(child.isMesh) {
+						child.material = new THREE.MeshPhongMaterial({
+							color: randomColor.getHex(),
+							specular: 0x7f7f7f,
+							shininess: 10
+						});
+					}
+				});
+				carousel.add(seat);
+			}
+		}
+	);
+	
+	currentModel = carousel;
+	
+	abst = new THREE.Group();
+	
+	let geometries = [
+		{ type: 'sphere', radius: 2.5 },
+		{ type: 'torus', radius: 5, tube: 0.25 },
+		{ type: 'cone', radius: 0.5, height: 1 }
+	];
+	shapes = [];
+	geometries.forEach((geo, index) => {
+		let geometry;
+		
+		if (geo.type === 'sphere') {
+			geometry = new THREE.SphereGeometry(geo.radius, 19, 19);
+		} else if (geo.type === 'torus') {
+			geometry = new THREE.TorusGeometry(geo.radius, geo.tube, 19, 19);
+		} else if (geo.type === 'cone') {
+			geometry = new THREE.ConeGeometry(geo.radius, geo.height, 19);
+			geometry.translate(0, 3.5, 0);
+		}
+		
+		let material = new THREE.MeshStandardMaterial({
+			color: Math.random() * 0xffffff,
+			metalness: 0.5,
+			roughness: 0.5
+		});
+		
+		let mesh = new THREE.Mesh(geometry, material);
+		
+		shapes.push(mesh);
+		abst.add(mesh);
+    });
+	
+	scene.add(currentModel);
+}
+
+function installOrbitControls() {
+	controls = new OrbitControls(camera, canvas);
+	function move() {
+		controls.update();
+		if(!animating) {
+			render();
+		}
+	}
+	function down() {
+		document.addEventListener("mousemove", move, false);
+	}
+	function up() {
+		document.removeEventListener("mousemove", move, false);
+	}
+	function touch(event) {
+		if(event.touches.length == 1) {
+			move();
+		}
+	}
+	canvas.addEventListener("mousedown", down, false);
+	canvas.addEventListener("touchmove", touch, false);
+	canvas.addEventListener("wheel", move, false);
+}
+
+function render() {
+	renderer.render(scene, camera);
+}
+
+function updateForFrame() {
+	if(currentModel == carousel) {
+		carousel.rotateY(- 0.01);
+		earth.rotateY(0.02);
+	} else {
+		shapes.forEach((obj, index) => {
+			obj.rotateX((index + 1) * 0.01);
+			obj.rotateY((index + 1) * 0.005);
+		});
+	}
+}
+
+function doFrame() {
+	if(animating) {
+		updateForFrame();
+		render();
+		requestAnimationFrame(doFrame); 
+	}
+}
+
+function doAnimateCheckbox() {
+	if(document.getElementById("animate").checked != animating) {
+		animating = !animating;
+		if(animating) {
+			doFrame();
+		}
+	}
+}
+
+function doChangeModel() {
+	if(document.getElementById("carousel").checked) {
+		scene.remove(currentModel);
+		currentModel = carousel;
+		scene.add(currentModel);
+	} else {
+		scene.remove(currentModel);
+		currentModel = abst;
+		scene.add(currentModel);
+	}
+}
+
+function init() {
+	canvas = document.getElementById("threejscanvas");
+	renderer = new THREE.WebGLRenderer({
+		canvas: canvas,
+		antialias: true
+	});
+	
+	document.getElementById("animate").checked = true;
+	document.getElementById("animate").onchange = doAnimateCheckbox;
+	document.getElementById("carousel").checked = true;
+	document.getElementById("carousel").onchange = doChangeModel;
+	document.getElementById("abst").onchange = doChangeModel;
+	
+	create();
+	installOrbitControls();
+	render();
+	doFrame();
+}
+
+window.onload = init;
+		</script>
+	</head>
+	<body>
+		<h1>three.js Carousel</h1>
+		<noscript>
+			<p>JavaScript is required</p>
+		</noscript>
+		<p>
+			<label><input type="checkbox" id="animate">Animate</label><br>
+			<label><input type="radio" id="carousel" name="model">Carousel</label><br>
+			<label><input type="radio" id="abst" name="model">Abstract geometry</label>
+		</p>
+		<canvas id="threejscanvas" width="512" height="512">
+			Canvas not supported
+		</canvas>
+	</body>
+</html>
